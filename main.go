@@ -13,6 +13,7 @@ import (
 	"google.golang.org/api/youtube/v3"
 )
 
+//TelegramBot struct
 type TelegramBot struct {
 	Bot    *tgbotapi.BotAPI
 	ChatID int64
@@ -52,50 +53,38 @@ func main() {
 			text := update.Message.Text
 
 			if text == "/start" || text == "/help" {
-				msg := tgbotapi.NewMessage(telegrambot.ChatID, "Введите название автора и название песни")
-				_, err := telegrambot.Bot.Send(msg)
-				if err != nil {
-					log.Error(err)
-				}
+				msg := tgbotapi.NewMessage(user, "Введите название автора и название песни")
+				telegrambot.Bot.Send(msg)
 			} else {
-				msg := tgbotapi.NewMessage(telegrambot.ChatID, "Поиск...")
-				_, err := telegrambot.Bot.Send(msg)
-				if err != nil {
-					log.Error(err)
-				}
+				msg := tgbotapi.NewMessage(user, "Поиск...")
+				telegrambot.Bot.Send(msg)
 				id, _, _ := SearchingVideo(text, developerKey)
-
-				if id != "" {
-					go func() {
-						ticker := time.NewTicker(time.Second * 10)
-						for range ticker.C {
-							if song != "" {
-								ticker.Stop()
-							}
-							msg := tgbotapi.NewMessage(telegrambot.ChatID, "Конвертация")
-							_, err := telegrambot.Bot.Send(msg)
-							if err != nil {
-								//log.Error(err)
-							}
+				var ok bool
+				go func() {
+					ticker := time.NewTicker(time.Second * 7)
+					for range ticker.C {
+						if ok == true {
+							ticker.Stop()
 						}
-					}()
-					ConvertingVideo(id)
-
-					filemp3 := tgbotapi.NewAudioUpload(user, id+".mp3")
-					_, err := telegrambot.Bot.Send(filemp3)
-					if err != nil {
-						msg := tgbotapi.NewMessage(telegrambot.ChatID, "Ошибка отправки файла")
-						_, err := telegrambot.Bot.Send(msg)
-						if err != nil {
-							log.Error(err)
-						}
+						msg := tgbotapi.NewMessage(user, "Конвертация...")
+						telegrambot.Bot.Send(msg)
 					}
+				}()
+				ok, _ = ConvertingVideo(id)
+
+				filemp3 := tgbotapi.NewAudioUpload(user, id+".mp3")
+				_, err := telegrambot.Bot.Send(filemp3)
+				if err != nil {
+					msg := tgbotapi.NewMessage(user, "Ошибка отправки файла")
+					telegrambot.Bot.Send(msg)
 				}
+
 			}
 		}()
 	}
 }
 
+//SearchingVideo by keyword
 func SearchingVideo(n, key string) (string, string, error) {
 	var VideoID, VideoName string
 	client := &http.Client{
@@ -105,10 +94,7 @@ func SearchingVideo(n, key string) (string, string, error) {
 	service, err := youtube.New(client)
 	if err != nil {
 		msg := tgbotapi.NewMessage(telegrambot.ChatID, "Ошибка загрузки видео...")
-		_, err := telegrambot.Bot.Send(msg)
-		if err != nil {
-			log.Error(err)
-		}
+		telegrambot.Bot.Send(msg)
 		return "", "", err
 	}
 
@@ -133,7 +119,8 @@ func SearchingVideo(n, key string) (string, string, error) {
 	return VideoID, VideoName, err
 }
 
-func ConvertingVideo(n string) error {
+//ConvertingVideo function
+func ConvertingVideo(n string) (bool, error) {
 
 	cmd := exec.Command("youtube-dl", "-x", "--audio-format", "mp3", "--audio-quality", "9", "-o", "%(id)s.%(ext)s", n)
 	cmd.Stdout = os.Stdout
@@ -144,12 +131,10 @@ func ConvertingVideo(n string) error {
 
 	if err != nil {
 		msg := tgbotapi.NewMessage(telegrambot.ChatID, "Ошибка конвертации")
-		_, err := telegrambot.Bot.Send(msg)
-		if err != nil {
-			log.Error(err)
-		}
+		telegrambot.Bot.Send(msg)
+		return false, err
 	}
-	return err
+	return true, err
 }
 
 func (b *TelegramBot) botInit(n string) *tgbotapi.BotAPI {
