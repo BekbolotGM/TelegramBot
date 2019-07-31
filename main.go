@@ -24,7 +24,7 @@ var (
 )
 
 func main() {
-	getTokens()
+	bottoken, devkey := GetTokenAndDevKey()
 	telegrambot.botInit(bottoken)
 
 	log.Printf("Authorized on account %s", telegrambot.Bot.Self.UserName)
@@ -50,7 +50,7 @@ func main() {
 			} else {
 				msg := tgbotapi.NewMessage(user, "Поиск...")
 				telegrambot.Bot.Send(msg)
-				id, _ := SearchingVideo(text, developerKey)
+				id, _ := SearchingVideo(text, devkey)
 
 				var ok bool
 
@@ -141,14 +141,15 @@ func (b *TelegramBot) botInit(n string) *tgbotapi.BotAPI {
 	return b.Bot
 }
 
-func getTokens() (string, string, error) {
+//GetTokenAndDevKey function
+func GetTokenAndDevKey() (string, string) {
 	bottoken := os.Getenv("BOTTOKEN")
 	developerKey := os.Getenv("DEVELOPERKEY")
 
 	if bottoken == "" || developerKey == "" {
 		fmt.Print("BotToken or DeveloperKey is does not exist")
 		os.Exit(1)
-		return "", "", err
+		return "", ""
 	}
-	return bottoken, developerKey, err
+	return bottoken, developerKey
 }
