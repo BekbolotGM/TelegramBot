@@ -24,14 +24,7 @@ var (
 )
 
 func main() {
-	bottoken := os.Getenv("BOTTOKEN")
-	developerKey := os.Getenv("DEVELOPERKEY")
-
-	if bottoken == "" || developerKey == "" {
-		fmt.Print("BotToken or DeveloperKey is does not exist")
-		os.Exit(1)
-	}
-
+	getTokens()
 	telegrambot.botInit(bottoken)
 
 	log.Printf("Authorized on account %s", telegrambot.Bot.Self.UserName)
@@ -41,7 +34,6 @@ func main() {
 	updates, _ := telegrambot.Bot.GetUpdatesChan(u)
 
 	for update := range updates {
-		//
 		if update.Message == nil { // ignore any non-Message Updates
 			continue
 		}
@@ -58,8 +50,10 @@ func main() {
 			} else {
 				msg := tgbotapi.NewMessage(user, "Поиск...")
 				telegrambot.Bot.Send(msg)
-				id, _, _ := SearchingVideo(text, developerKey)
+				id, _ := SearchingVideo(text, developerKey)
+
 				var ok bool
+
 				go func() {
 					ticker := time.NewTicker(time.Second * 7)
 					for range ticker.C {
@@ -85,8 +79,8 @@ func main() {
 }
 
 //SearchingVideo by keyword
-func SearchingVideo(n, key string) (string, string, error) {
-	var VideoID, VideoName string
+func SearchingVideo(n, key string) (string, error) {
+	var VideoID string
 	client := &http.Client{
 		Transport: &transport.APIKey{Key: key},
 	}
@@ -95,7 +89,7 @@ func SearchingVideo(n, key string) (string, string, error) {
 	if err != nil {
 		msg := tgbotapi.NewMessage(telegrambot.ChatID, "Ошибка загрузки видео...")
 		telegrambot.Bot.Send(msg)
-		return "", "", err
+		return "", err
 	}
 
 	// Make the API call to YouTube.
@@ -106,17 +100,16 @@ func SearchingVideo(n, key string) (string, string, error) {
 	response, err := call.Do()
 	if err != nil {
 		//SendMsg("Ошибка поиска...попробуйте еще раз")
-		return "", "", err
+		return "", err
 	}
 
 	for _, item := range response.Items {
 		switch item.Id.Kind {
 		case "youtube#video":
 			VideoID = item.Id.VideoId
-			VideoName = item.Snippet.Title
 		}
 	}
-	return VideoID, VideoName, err
+	return VideoID, err
 }
 
 //ConvertingVideo function
@@ -137,6 +130,7 @@ func ConvertingVideo(n string) (bool, error) {
 	return true, err
 }
 
+//botInit function
 func (b *TelegramBot) botInit(n string) *tgbotapi.BotAPI {
 	bot, err := tgbotapi.NewBotAPI(n)
 	if err != nil {
@@ -145,4 +139,16 @@ func (b *TelegramBot) botInit(n string) *tgbotapi.BotAPI {
 	bot.Debug = true
 	b.Bot = bot
 	return b.Bot
+}
+
+func getTokens() (string, string, error) {
+	bottoken := os.Getenv("BOTTOKEN")
+	developerKey := os.Getenv("DEVELOPERKEY")
+
+	if bottoken == "" || developerKey == "" {
+		fmt.Print("BotToken or DeveloperKey is does not exist")
+		os.Exit(1)
+		return "", "", err
+	}
+	return bottoken, developerKey, err
 }
