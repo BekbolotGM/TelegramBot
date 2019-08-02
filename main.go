@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api"
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/youtube/v3"
@@ -78,23 +79,26 @@ func main() {
 	}
 }
 
-//SearchingVideo by keyword
-func SearchingVideo(n, key string) (string, error) {
-	var VideoID string
+func youtubeClient(key string) (*youtube.Service, error) {
 	client := &http.Client{
 		Transport: &transport.APIKey{Key: key},
 	}
-
 	service, err := youtube.New(client)
 	if err != nil {
-		msg := tgbotapi.NewMessage(telegrambot.ChatID, "Ошибка загрузки видео...")
-		telegrambot.Bot.Send(msg)
-		return "", err
+		logrus.Info(err)
+		return nil, err
 	}
+	return service, err
+}
+
+//SearchingVideo by keyword
+func SearchingVideo(keyword, key string) (string, error) {
+	service, _ := youtubeClient(key)
+	var VideoID string
 
 	// Make the API call to YouTube.
 	call := service.Search.List("id,snippet").
-		Q(n).
+		Q(keyword).
 		MaxResults(1)
 
 	response, err := call.Do()
@@ -123,8 +127,8 @@ func ConvertingVideo(n string) (bool, error) {
 	err := cmd.Run()
 
 	if err != nil {
-		msg := tgbotapi.NewMessage(telegrambot.ChatID, "Ошибка конвертации")
-		telegrambot.Bot.Send(msg)
+		/* 	msg := tgbotapi.NewMessage(telegrambot.ChatID, "Ошибка конвертации")
+		telegrambot.Bot.Send(msg) */
 		return false, err
 	}
 	return true, err
@@ -148,8 +152,8 @@ func GetTokenAndDevKey() (string, string) {
 
 	if bottoken == "" || developerKey == "" {
 		fmt.Print("BotToken or DeveloperKey is does not exist")
-		os.Exit(1)
 		return "", ""
+		log.Fatal()
 	}
 	return bottoken, developerKey
 }
