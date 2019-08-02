@@ -103,7 +103,8 @@ func SearchingVideo(keyword, key string) (string, error) {
 
 	response, err := call.Do()
 	if err != nil {
-		//SendMsg("Ошибка поиска...попробуйте еще раз")
+		msg := tgbotapi.NewMessage(telegrambot.ChatID, "Ошибка поиска...")
+		telegrambot.Bot.Send(msg)
 		return "", err
 	}
 
